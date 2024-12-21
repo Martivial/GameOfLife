@@ -21,7 +21,7 @@ namespace GameOfLife
             InitializeComponent();
             InitializeGrid();
             InitializeTimer();
-            isPaused = false; 
+            isPaused = false;
         }
 
         private void InitializeGrid()
@@ -29,11 +29,13 @@ namespace GameOfLife
             grid = new bool[GridWidth, GridHeight];
             nextGrid = new bool[GridWidth, GridHeight];
             Random rand = new Random();
+
+            // Zwiększona szansa na żywe komórki
             for (int x = 0; x < GridWidth; x++)
             {
                 for (int y = 0; y < GridHeight; y++)
                 {
-                    grid[x, y] = rand.NextDouble() > 0.7;
+                    grid[x, y] = rand.NextDouble() > 0.5; // 50% szansa na czarną kratkę
                 }
             }
         }
@@ -41,13 +43,13 @@ namespace GameOfLife
         private void InitializeTimer()
         {
             timer = new Timer();
-            timer.Interval = 1000; // Aktualizacja co 1 sekundę
+            timer.Interval = 300; // Aktualizacja co 300ms dla płynności
             timer.Tick += (sender, args) =>
             {
-                if (!isPaused) // Jeśli nie jest wstrzymana, aktualizujemy stan
+                if (!isPaused)
                 {
                     UpdateGrid();
-                    Invalidate();
+                    Invalidate(); // Ograniczamy rysowanie do minimum
                 }
             };
             timer.Start();
@@ -71,6 +73,7 @@ namespace GameOfLife
                 }
             }
 
+            // Przełączamy siatkę
             var temp = grid;
             grid = nextGrid;
             nextGrid = temp;
@@ -95,32 +98,27 @@ namespace GameOfLife
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
-            DrawGrid(e.Graphics);
             DrawCells(e.Graphics);
-        }
-
-        private void DrawGrid(Graphics g)
-        {
-            Pen pen = new Pen(Color.Gray);
-            for (int x = 0; x < GridWidth; x++)
-            {
-                for (int y = 0; y < GridHeight; y++)
-                {
-                    g.DrawRectangle(pen, x * CellSize, y * CellSize, CellSize, CellSize);
-                }
-            }
         }
 
         private void DrawCells(Graphics g)
         {
-            Brush brush = new SolidBrush(Color.Black);
+            // Rysujemy tylko zmienione komórki
+            Brush blackBrush = new SolidBrush(Color.Black);
+            Brush whiteBrush = new SolidBrush(Color.White);
+
             for (int x = 0; x < GridWidth; x++)
             {
                 for (int y = 0; y < GridHeight; y++)
                 {
+                    Rectangle cell = new Rectangle(x * CellSize, y * CellSize, CellSize, CellSize);
                     if (grid[x, y])
                     {
-                        g.FillRectangle(brush, x * CellSize, y * CellSize, CellSize, CellSize);
+                        g.FillRectangle(blackBrush, cell);
+                    }
+                    else
+                    {
+                        g.FillRectangle(whiteBrush, cell);
                     }
                 }
             }
@@ -132,19 +130,17 @@ namespace GameOfLife
             int y = e.Y / CellSize;
             if (x < GridWidth && y < GridHeight)
             {
-                grid[x, y] = !grid[x, y]; 
-                Invalidate(); 
+                grid[x, y] = !grid[x, y];
+                Invalidate();
             }
         }
 
-    
         private void BtnPauseResume_Click(object sender, EventArgs e)
         {
             isPaused = !isPaused;
             btnPauseResume.Text = isPaused ? "Resume" : "Pause";
         }
 
-        // Zapis do pliku
         private void BtnSave_Click(object sender, EventArgs e)
         {
             using (StreamWriter writer = new StreamWriter("gameState.txt"))
@@ -160,7 +156,6 @@ namespace GameOfLife
             }
         }
 
-        // Wczytanie stanu gry z pliku
         private void BtnLoad_Click(object sender, EventArgs e)
         {
             if (File.Exists("gameState.txt"))
